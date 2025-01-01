@@ -50,10 +50,10 @@ def get_orders(endpoint, request_params, access_token):
 
 # Function to synchronize Amazon vendor orders with the local system
 @frappe.whitelist()
-def sync_amazon_vendor_orders(created_after=None):
+def sync_amazon_vendor_orders(created_after=None, created_before = None):
     # Fetch credentials for Amazon Seller API
     credentials = get_credentials(
-        'Amazon Seller API',
+        'Amazon API Settings',
         fields=['refresh_token', 'lwa_app_id', 'lwa_client_secret', 'endpoint', 'marketplace_id']
     )
 
@@ -69,15 +69,18 @@ def sync_amazon_vendor_orders(created_after=None):
     # Set default created_after value if not provided
     if not created_after:
         created_after = (
-            datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=2)
+            datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=3)
         ).strftime('%Y-%m-%dT%H:%M:%SZ')
 
     # Prepare request parameters for fetching orders
     request_params = {
         "MarketplaceIds": marketplace_id,
         "createdAfter": created_after,
+        'purchaseOrderState' : 'Acknowledged',
     }
 
+    if created_before:
+        request_params["createdBefore"] = created_before
     # Fetch orders and handle response data
     orders = get_orders(endpoint, request_params, access_token)
     orders_list = orders.get("payload", {}).get("orders", [])

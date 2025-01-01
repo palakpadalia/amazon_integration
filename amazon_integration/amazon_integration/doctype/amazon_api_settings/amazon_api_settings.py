@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class AmazonSellerAPI(Document):
+class AmazonAPISettings(Document):
 	pass

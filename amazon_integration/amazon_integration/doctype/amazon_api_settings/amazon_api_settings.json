@@ -10,10 +10,12 @@
   "refresh_token",
   "lwa_app_id",
   "lwa_client_secret",
+  "load_sync",
+  "column_break_ysju",
   "endpoint",
   "marketplace_id",
   "from_date",
-  "load_sync"
+  "to_date"
  ],
  "fields": [
   {
@@ -61,15 +63,24 @@
    "fieldname": "load_sync",
    "fieldtype": "Button",
    "label": "Load Sync"
+  },
+  {
+   "fieldname": "column_break_ysju",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Datetime",
+   "label": "To Date"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-12-31 17:36:15.508796",
+ "modified": "2025-01-01 11:42:45.070474",
  "modified_by": "Administrator",
  "module": "Amazon Integration",
- "name": "Amazon Seller API",
+ "name": "Amazon API Settings",
  "owner": "Administrator",
  "permissions": [
   {
