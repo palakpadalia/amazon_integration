@@ -69,7 +69,7 @@ def sync_amazon_vendor_orders(created_after=None, created_before = None):
     # Set default created_after value if not provided
     if not created_after:
         created_after = (
-            datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=3)
+            datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=2)
         ).strftime('%Y-%m-%dT%H:%M:%SZ')
 
     # Prepare request parameters for fetching orders
