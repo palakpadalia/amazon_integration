@@ -1,0 +1,89 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-12-26 15:16:55.280722",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "api_details_section",
+  "enable",
+  "refresh_token",
+  "lwa_app_id",
+  "lwa_client_secret",
+  "endpoint",
+  "marketplace_id",
+  "from_date",
+  "load_sync"
+ ],
+ "fields": [
+  {
+   "fieldname": "api_details_section",
+   "fieldtype": "Section Break",
+   "label": "API Details"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable",
+   "fieldtype": "Check",
+   "label": "Enable"
+  },
+  {
+   "fieldname": "refresh_token",
+   "fieldtype": "Data",
+   "label": "Refresh Token"
+  },
+  {
+   "fieldname": "lwa_app_id",
+   "fieldtype": "Data",
+   "label": "LWA App ID"
+  },
+  {
+   "fieldname": "lwa_client_secret",
+   "fieldtype": "Data",
+   "label": "LWA Client Secret"
+  },
+  {
+   "fieldname": "endpoint",
+   "fieldtype": "Data",
+   "label": "Endpoint"
+  },
+  {
+   "fieldname": "marketplace_id",
+   "fieldtype": "Data",
+   "label": "Marketplace ID"
+  },
+  {
+   "fieldname": "from_date",
+   "fieldtype": "Datetime",
+   "label": "From Date"
+  },
+  {
+   "fieldname": "load_sync",
+   "fieldtype": "Button",
+   "label": "Load Sync"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2024-12-31 17:36:15.508796",
+ "modified_by": "Administrator",
+ "module": "Amazon Integration",
+ "name": "Amazon Seller API",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

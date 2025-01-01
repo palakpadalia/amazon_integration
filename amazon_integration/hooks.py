@@ -137,34 +137,39 @@ app_license = "mit"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	'Sales Order' : {
+        'autoname' : 'amazon_integration.amazon_integration.py.amazon.autoname'
+    }
+}
 
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
+scheduler_events = {
+    
+# 'cron': {
+#         '59 * * * *' : [
+#             'amazon_integration.amazon_integration.py.amazon_api.sync_amazon_vendor_orders'
+#         ]
+#     },
+
 # 	"all": [
 # 		"amazon_integration.tasks.all"
 # 	],
 # 	"daily": [
 # 		"amazon_integration.tasks.daily"
 # 	],
-# 	"hourly": [
-# 		"amazon_integration.tasks.hourly"
-# 	],
+	"hourly": [
+		"amazon_integration.amazon_integration.py.amazon.sync_amazon_vendor_orders"
+	],
 # 	"weekly": [
 # 		"amazon_integration.tasks.weekly"
 # 	],
 # 	"monthly": [
 # 		"amazon_integration.tasks.monthly"
 # 	],
-# }
+ }
 
 # Testing
 # -------
