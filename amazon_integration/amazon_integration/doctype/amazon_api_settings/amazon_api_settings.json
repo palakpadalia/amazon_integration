@@ -11,6 +11,7 @@
   "lwa_app_id",
   "lwa_client_secret",
   "load_sync",
+  "amazon_sales_person",
   "column_break_ysju",
   "endpoint",
   "marketplace_id",
@@ -72,12 +73,18 @@
    "fieldname": "to_date",
    "fieldtype": "Datetime",
    "label": "To Date"
+  },
+  {
+   "fieldname": "amazon_sales_person",
+   "fieldtype": "Link",
+   "label": "Amazon Sales Person",
+   "options": "Sales Person"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-01-01 11:42:45.070474",
+ "modified": "2025-01-08 16:55:45.911003",
  "modified_by": "Administrator",
  "module": "Amazon Integration",
  "name": "Amazon API Settings",
