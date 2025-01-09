@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class TestAmazonAPISettings(FrappeTestCase):
+class TestAmazonVendorSettings(FrappeTestCase):
 	pass

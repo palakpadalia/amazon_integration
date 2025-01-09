@@ -10,8 +10,8 @@
   "refresh_token",
   "lwa_app_id",
   "lwa_client_secret",
-  "load_sync",
   "amazon_sales_person",
+  "load_sync",
   "column_break_ysju",
   "endpoint",
   "marketplace_id",
@@ -25,7 +25,7 @@
    "label": "API Details"
   },
   {
-   "default": "0",
+   "default": "1",
    "fieldname": "enable",
    "fieldtype": "Check",
    "label": "Enable"
@@ -84,10 +84,10 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-01-08 16:55:45.911003",
+ "modified": "2025-01-09 10:20:40.558558",
  "modified_by": "Administrator",
  "module": "Amazon Integration",
- "name": "Amazon API Settings",
+ "name": "Amazon Vendor Settings",
  "owner": "Administrator",
  "permissions": [
   {

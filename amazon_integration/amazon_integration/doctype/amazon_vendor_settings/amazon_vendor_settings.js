@@ -1,7 +1,7 @@
 // Copyright (c) 2024, Palak P and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on("Amazon API Settings", {
+frappe.ui.form.on("Amazon Vendor Settings", {
     load_sync(frm) {
         // Convert to ISO 8601 format with 'Z' timezone
         const formatToISO8601 = (dateString) => {
