@@ -1,14 +1,10 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-# type: ignore[import]
 import requests
 import urllib.parse
 import frappe
 import datetime
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 
-#! CRITICAL: Never commit these credentials to version control
+# ? GET TOKEN FROM AMAZON SETTINGS
 def get_access_token(refresh_token, lwa_app_id, lwa_client_secret):
     """
     Get Amazon API access token.
@@ -25,7 +21,7 @@ def get_access_token(refresh_token, lwa_app_id, lwa_client_secret):
         RequestException: If token fetch fails
     """
     try:
-        #? Uses OAuth 2.0 token endpoint
+        # ? USES OAUTH 2.0 TOKEN ENDPOINT
         token_response = requests.post(
             "https://api.amazon.com/auth/o2/token",
             data={
@@ -39,11 +35,11 @@ def get_access_token(refresh_token, lwa_app_id, lwa_client_secret):
         return token_response.json().get("access_token")
 
     except requests.exceptions.RequestException as e:
-        #! Critical error - without token, no API access possible
+        # ! CRITICAL ERROR - WITHOUT TOKEN, NO API ACCESS POSSIBLE
         frappe.log_error(str(e), "Access Token Error")
         raise
 
-
+# ? GET ORDERS FROM AMAZON API WITH TOKENS
 def get_orders(endpoint, request_params, access_token):
     """
     Fetch orders from Amazon Vendor API.
@@ -57,7 +53,7 @@ def get_orders(endpoint, request_params, access_token):
         dict: JSON response with orders data
     """
     try:
-        #* Construct URL with proper encoding
+        # * CONSTRUCT URL WITH PROPER ENCODING
         response = requests.get(
             f"{endpoint}/vendor/orders/v1/purchaseOrders?"
             + urllib.parse.urlencode(request_params),
@@ -67,11 +63,11 @@ def get_orders(endpoint, request_params, access_token):
         return response.json()
 
     except requests.exceptions.RequestException as e:
-        #? Return empty orders list as fallback
+        # ? RETURN EMPTY ORDERS LIST AS FALLBACK
         frappe.log_error(str(e), "Fetch Orders Error")
         return {"payload": {"orders": []}}
 
-
+# 
 @frappe.whitelist()
 def sync_amazon_vendor_orders(created_after=None, created_before=None):
     """
@@ -84,7 +80,7 @@ def sync_amazon_vendor_orders(created_after=None, created_before=None):
     Returns:
         list: Processed orders
     """
-    #* Get API credentials and settings
+    # * GET API CREDENTIALS AND SETTINGS
     credentials = get_credentials(
         "Amazon Settings",
         fields=[
@@ -98,12 +94,12 @@ def sync_amazon_vendor_orders(created_after=None, created_before=None):
         ],
     )
 
-    #? Early return if integration is disabled
+    # ? EARLY RETURN IF INTEGRATION IS DISABLED
     enabled = credentials["enable"]
     if not enabled:
         return
 
-    #* Extract credentials
+    # * EXTRACT CREDENTIALS
     refresh_token = credentials["refresh_token"]
     lwa_app_id = credentials["lwa_app_id"]
     lwa_client_secret = credentials["lwa_client_secret"]
@@ -111,16 +107,16 @@ def sync_amazon_vendor_orders(created_after=None, created_before=None):
     endpoint = credentials["endpoint"]
     sales_person = credentials["amazon_sales_person"]
 
-    #! Critical: Get fresh access token for API access
+    # ! CRITICAL: GET FRESH ACCESS TOKEN FOR API ACCESS
     access_token = get_access_token(refresh_token, lwa_app_id, lwa_client_secret)
 
-    #? Default to last 2 hours if no start date provided
+    # ? DEFAULT TO LAST 2 HOURS IF NO START DATE PROVIDED
     if not created_after:
         created_after = (
             datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=2)
         ).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    #* Prepare request parameters
+    # * PREPARE REQUEST PARAMETERS
     request_params = {
         "MarketplaceIds": marketplace_id,
         "createdAfter": created_after,
@@ -130,7 +126,7 @@ def sync_amazon_vendor_orders(created_after=None, created_before=None):
     if created_before:
         request_params["createdBefore"] = created_before
 
-    #* Fetch and process orders
+    # * FETCH AND PROCESS ORDERS
     orders = get_orders(endpoint, request_params, access_token)
     orders_list = orders.get("payload", {}).get("orders", [])
     add_orders(orders_list, sales_person)
@@ -141,7 +137,7 @@ def sync_amazon_vendor_orders(created_after=None, created_before=None):
 @frappe.whitelist()
 def add_orders(orders, sales_person):
     """Process multiple orders and create sales orders for new ones."""
-    #* Loop through orders and create if not existing
+    # * LOOP THROUGH ORDERS AND CREATE IF NOT EXISTING
     for order in orders:
         if order_does_not_exists(order):
             create_sales_order(order, sales_person)
@@ -150,7 +146,7 @@ def add_orders(orders, sales_person):
 @frappe.whitelist()
 def order_does_not_exists(order):
     """Check if order already exists in ERPNext."""
-    #? Prevent duplicate orders
+    # ? PREVENT DUPLICATE ORDERS
     existing_order = frappe.db.exists(
         "Sales Order", {"custom_amazon_order_id": order["purchaseOrderNumber"]}
     )
@@ -166,9 +162,11 @@ def get_customer_from_address(address_code):
         address_code (str): Address identifier
     
     Returns:
-        str: Company name
+        dict: Contains company name and address
+    
+    Raises:
+        frappe.ValidationError: If customer does not exist
     """
-    #* Two-step lookup: address -> company
     address = frappe.db.get_value(
         "Address", filters={"address_title": address_code}, fieldname=["name"]
     )
@@ -176,9 +174,15 @@ def get_customer_from_address(address_code):
     company = frappe.db.get_value(
         "Dynamic Link", filters={"parent": address}, fieldname=["link_title"]
     )
-    return {
-        'address': address
-        ,'company': company} 
+
+    if not company:
+        # Log missing customer information
+        frappe.log_error(
+            message=f"No customer found for party ID: {address_code}",
+            title="Missing Customer for Amazon Order"
+        )
+
+    return {'address': address, 'company': company}
 
 
 def get_default_warehouse():
@@ -198,21 +202,22 @@ def get_default_warehouse():
 def create_sales_order(order, sales_person):
     """
     Create new sales order from Amazon order.
-    
+
     Args:
         order (dict): Amazon order data
         sales_person (str): Sales person ID
-    
+
     Returns:
         str: Created sales order name
-    
+
     Raises:
         ValidationError: If order creation fails
     """
     try:
         sales_order = frappe.new_doc("Sales Order")
+        missing_vendor_items = []
 
-        #* Extract and validate delivery date
+        # * EXTRACT AND VALIDATE DELIVERY DATE
         date_range = order.get("orderDetails", {}).get("deliveryWindow", "")
         delivery_date = None
         if date_range and "--" in date_range:
@@ -220,25 +225,24 @@ def create_sales_order(order, sales_person):
                 delivery_date = date_range.split("--")[1].split("T")[0]
             except (IndexError, AttributeError):
                 delivery_date = order.get("orderDetails", {}).get("purchaseOrderDate", "").split("T")[0]
-        
-        #? Fallback dates if not found
+
+        # ? FALLBACK DATES IF NOT FOUND
         if not delivery_date:
             delivery_date = order.get("orderDetails", {}).get("purchaseOrderDate", "").split("T")[0]
 
         if not delivery_date:
             delivery_date = frappe.utils.today()
 
-        #* Set order header details
+        # * SET ORDER HEADER DETAILS
         sales_order.transaction_date = (
             order.get("orderDetails", {}).get("purchaseOrderDate", "").split("T")[0]
             or frappe.utils.today()
         )
 
-        address_code = (
-            order.get("orderDetails", {}).get("buyingParty", {}).get("partyId", "")
-        )
-        sales_order.customer = get_customer_from_address(address_code).get('company')
-        sales_order.customer_address = get_customer_from_address(address_code).get('address')
+        address_code = order.get("orderDetails", {}).get("buyingParty", {}).get("partyId", "")
+        customer_data = get_customer_from_address(address_code)
+        sales_order.customer = customer_data.get('company')
+        sales_order.customer_address = customer_data.get('address')
         sales_order.custom_amazon_order_id = order.get("purchaseOrderNumber", "")
 
         sales_order.custom_sales_person = sales_person
@@ -249,18 +253,23 @@ def create_sales_order(order, sales_person):
 
         sales_order.delivery_date = delivery_date
 
-        #* Get default warehouse
+        # * GET DEFAULT WAREHOUSE
         default_warehouse = get_default_warehouse()
 
-        #* Set up taxes
+        # * Set up taxes
         set_tax_and_charges_table(sales_order=sales_order)
 
-        #* Process order items
+        # * PROCESS ORDER ITEMS
         items = order.get("orderDetails", {}).get("items", [])
         for item in items:
             amazon_product_id = item.get("amazonProductIdentifier")
             try:
-                item_code = get_item_code(amazon_product_id)
+                item_code, uom = get_item_code(amazon_product_id)  # ? UNPACK THE TUPLE
+
+                if not item_code:  # Skip if item_code is not found
+                    missing_vendor_items.append(amazon_product_id)
+                    continue
+
                 sales_order.append(
                     "items",
                     {
@@ -268,32 +277,54 @@ def create_sales_order(order, sales_person):
                         "delivery_date": delivery_date,
                         "qty": int(item.get("orderedQuantity", {}).get("amount", 0)),
                         "rate": float(item.get("netCost", {}).get("amount", 0)),
-                        "uom": "Nos",
-                        "warehouse": default_warehouse  # Set default warehouse from Stock Settings
+                        "uom": uom or "NOS",  # ? USE FETCHED UOM, DEFAULT TO "NOS" IF NONE
+                        "warehouse": default_warehouse  # ? SET DEFAULT WAREHOUSE FROM STOCK SETTINGS
                     },
                 )
+
             except frappe.ValidationError as e:
-                #! Critical: Log item processing errors
+                # ! LOG ITEM PROCESSING ERRORS
                 error_msg = f"Error processing order {order.get('purchaseOrderNumber', '')}: {str(e)}"
                 frappe.log_error(message=error_msg, title="Amazon Order Item Error")
-                raise frappe.ValidationError(error_msg)
 
-        #* Save and commit
+        # * SAVE AND COMMIT SALES ORDER
         sales_order.save()
         frappe.db.commit()
+
+        # * LOG MISSING VENDOR IDS IN SALES ORDER ITEM TRACKING DOCTYPE
+        if missing_vendor_items:
+            tracking_doc = frappe.new_doc("Sales Order Item Tracking")
+            tracking_doc.sales_order = sales_order.name
+            tracking_doc.old_items = {'Missing Items': missing_vendor_items}  # JSON FIELD
+
+            # Log before saving
+            frappe.log_error(message=f"Tracking Doc Data: {frappe.as_json(tracking_doc)}", title="Sales Order Item Tracking Debug")
+
+            tracking_doc.save(ignore_permissions=True)
+            frappe.db.commit()
+
+            # Show message only once per sync execution
+            if not getattr(frappe.flags, "missing_items_msg_shown", False):
+                frappe.msgprint(
+                    msg="Some items were not found in the system. Please check the 'Sales Order Item Tracking' list.",
+                    title="Missing Items Warning",
+                    indicator="orange"
+                )
+                frappe.flags.missing_items_msg_shown = True  # Set flag to prevent duplicates
+
+
 
         return sales_order.name
 
     except Exception as e:
-        #! Critical: Log order creation errors
+        # ! LOG ORDER CREATION ERRORS
         frappe.log_error(message=str(e), title="Create Sales Order Error")
-        raise
-
+        raise frappe.ValidationError("Failed to create sales order. Check logs for details.")
 
 @frappe.whitelist()
 def get_tax_and_charges_template():
     """Get default tax template."""
-    #* Get default tax template
+    # * GET DEFAULT TAX TEMPLATE
     template = frappe.db.get_value(
         "Sales Taxes and Charges Template",
         filters={"is_default": 1},
@@ -318,26 +349,39 @@ def get_credentials(doctype, fields):
 
 
 @frappe.whitelist()
-def get_item_code(item_code):
+def get_item_code(vendor_id):
     """
-    Get ERPNext item code from Amazon vendor ID.
+    Get ERPNext item code and UOM from Amazon vendor ID stored in the Stock UOM Conversion table.
     
-    Raises:
-        ValidationError: If item not found
+    Args:
+        vendor_id (str): Amazon vendor ID
+    
+    Returns:
+        tuple: (item_code, uom) or (None, None) if not found
     """
-    #? Check if item exists
-    found_item_code = frappe.db.get_value(
-        "Item", filters={"custom_amazon_vendor_id": item_code}, fieldname="name"
+    # ? FIND UOM CONVERSION ENTRY WITH GIVEN AMAZON VENDOR ID
+    uom_entry = frappe.db.get_value(
+        "UOM Conversion Detail",
+        filters={"custom_amazon_vendor_id": vendor_id},
+        fieldname=["parent", "uom"],
+        as_dict=True
     )
-    if not found_item_code:
-        #! Critical: Item not found
-        frappe.throw(f"Item with Amazon Vendor ID '{item_code}' not found in the system")
-    return found_item_code
+
+    if not uom_entry:
+        # ? RETURN EMPTY VALUES INSTEAD OF THROWING AN ERROR
+        return None, None  
+
+    item_code = uom_entry.get("parent")  # Parent is the Item code
+    uom = uom_entry.get("uom") or "NOS"  # Default UOM to NOS if not found
+
+    return item_code, uom
+
+
 
 
 def set_tax_and_charges_table(sales_order):
     """Set up tax and charges in sales order."""
-    #* Get and apply tax template
+    # * GET AND APPLY TAX TEMPLATE
     tax_and_charges_template = get_tax_and_charges_template()
     master_name = tax_and_charges_template["name"]
     tax_category = tax_and_charges_template["tax_category"]
@@ -345,7 +389,7 @@ def set_tax_and_charges_table(sales_order):
     sales_order.tax_category = tax_category
     sales_order.taxes_and_charges = master_name
 
-    #* Apply tax entries
+    # * APPLY TAX ENTRIES
     tax_entries = get_taxes_and_charges(
         master_doctype="Sales Taxes and Charges Template", master_name=master_name
     )
@@ -368,6 +412,8 @@ def set_tax_and_charges_table(sales_order):
 
 def autoname(doc, method):
     """Generate custom name for Amazon orders."""
-    #? Set custom naming format for Amazon orders
+    # ? SET CUSTOM NAMING FORMAT FOR AMAZON ORDERS
     if doc.get("custom_amazon_order_id"):
         doc.name = f"AMZ-{doc.custom_amazon_order_id}"
+
+
